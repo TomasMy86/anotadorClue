@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1b5e20">
+    <title>Anotador Clue</title>
+    <style>
+        :root {
+            --green-dark: #1b5e20;
+            --green-mid: #2e7d32;
+            --green-light: #4caf50;
+            --green-pale: #e8f5e9;
+            --green-border: #81c784;
+            --red: #d32f2f;
+            --red-light: #ffcdd2;
+            --bg: #f1f5f1;
+            --cell-min: 42px;
+            --name-col: 120px;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html { 
+            overflow-x: hidden;
+            height: -webkit-fill-available;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: #333;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            padding-bottom: calc(60px + var(--safe-bottom));
+            touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
+            overflow-x: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+            color: white;
+            padding: 10px 16px;
+            padding-top: calc(10px + env(safe-area-inset-top, 0px));
+            padding-left: calc(16px + var(--safe-left));
+            padding-right: calc(16px + var(--safe-right));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,.25);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .header-controls { display: flex; gap: 8px; align-items: center; }
+
+        .btn-icon {
+            background: rgba(255,255,255,.15);
+            border: 1px solid rgba(255,255,255,.3);
+            color: white;
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: background .15s;
+        }
+        .btn-icon:active { background: rgba(255,255,255,.35); }
+
+        .player-config {
+            background: white;
+            padding: 10px 12px;
+            padding-left: calc(12px + var(--safe-left));
+            padding-right: calc(12px + var(--safe-right));
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid var(--green-border);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .player-config::-webkit-scrollbar { display: none; }
+
+        .player-config label {
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--green-dark);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .player-chip {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: var(--green-pale);
+            border: 1px solid var(--green-border);
+            border-radius: 20px;
+            padding: 4px 8px;
+            flex-shrink: 0;
+        }
+
+        .player-chip input {
+            border: none;
+            background: transparent;
+            width: 44px;
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--green-dark);
+            outline: none;
+            text-align: center;
+        }
+
+        .player-remove {
+            background: none;
+            border: none;
+            color: var(--red);
+            cursor: pointer;
+            font-size: .85rem;
+            line-height: 1;
+            padding: 2px 4px;
+            opacity: .6;
+            min-width: 24px;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .player-remove:active { opacity: 1; }
+
+        .player-add {
+            background: var(--green-light);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .name-legend {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            padding: 6px 8px;
+            font-size: .65rem;
+            color: #999;
+            flex-wrap: wrap;
+            line-height: 1.4;
+        }
+        .name-legend span { display: flex; align-items: center; gap: 3px; }
+
+        .section {
+            margin: 10px 6px;
+            margin-left: calc(6px + var(--safe-left));
+            margin-right: calc(6px + var(--safe-right));
+            background: white;
+            border-radius: 12px;
+            border: 2px solid var(--green-border);
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,.08);
+        }
+
+        .section-title {
+            background: linear-gradient(135deg, var(--green-mid), var(--green-light));
+            color: white;
+            padding: 7px 14px;
+            font-size: .9rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            letter-spacing: 2px;
+        }
+
+        .grid-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+            scrollbar-width: none;
+        }
+        .grid-wrapper::-webkit-scrollbar { display: none; }
+
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .grid-table th {
+            background: var(--green-pale);
+            color: var(--green-dark);
+            font-size: .68rem;
+            font-weight: 700;
+            padding: 6px 2px;
+            text-align: center;
+            border-bottom: 1px solid var(--green-border);
+            min-width: var(--cell-min);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .grid-table th:first-child {
+            text-align: left;
+            padding-left: 10px;
+            min-width: var(--name-col);
+            width: var(--name-col);
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--green-pale);
+        }
+
+        .grid-table td {
+            border-bottom: 1px solid #e8e8e8;
+            border-right: 1px solid #f0f0f0;
+            text-align: center;
+            vertical-align: middle;
+            height: var(--cell-min);
+            padding: 1px;
+            min-width: var(--cell-min);
+        }
+
+        .grid-table tr:last-child td { border-bottom: none; }
+
+        .grid-table td:first-child {
+            text-align: left;
+            padding: 4px 6px 4px 10px;
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--green-dark);
+            background: white;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            cursor: pointer;
+            user-select: none;
+            min-width: var(--name-col);
+            width: var(--name-col);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-right: 1px solid var(--green-border);
+        }
+
+        .name-strikethrough {
+            text-decoration: line-through;
+            text-decoration-color: var(--red);
+            text-decoration-thickness: 2px;
+            opacity: .45;
+        }
+        .name-circled {
+            background: #fff9c4;
+            border-radius: 14px;
+            padding: 1px 6px;
+            outline: 2.5px solid var(--green-light);
+            outline-offset: 1px;
+        }
+
+        .cell {
+            cursor: pointer;
+            width: 100%;
+            min-height: var(--cell-min);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            padding: 2px 1px;
+            transition: background .1s;
+            border-radius: 3px;
+        }
+
+        .cell:active { background: #c8e6c9; }
+        .cell.active { background: #c8e6c9; outline: 2px solid var(--green-light); outline-offset: -2px; }
+
+        .cell .mark {
+            font-size: .6rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 1px 2px;
+            border-radius: 2px;
+        }
+
+        .mark-num {
+            color: #1565c0;
+            background: #e3f2fd;
+            min-width: 12px;
+            text-align: center;
+            font-size: .58rem;
+        }
+
+        .mark-check { color: var(--green-mid); font-size: .75rem; }
+        .mark-cross { color: var(--red); font-size: .75rem; }
+        .mark-qgreen { color: var(--green-mid); font-size: .68rem; }
+        .mark-qred { color: var(--red); font-size: .68rem; }
+
+        /* --- Editor Panel (bottom sheet) --- */
+        .editor-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.3);
+            z-index: 199;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s;
+        }
+        .editor-backdrop.open { opacity: 1; pointer-events: auto; }
+
+        .editor-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            box-shadow: 0 -4px 24px rgba(0,0,0,.2);
+            padding: 0 16px;
+            padding-left: calc(16px + var(--safe-left));
+            padding-right: calc(16px + var(--safe-right));
+            padding-bottom: calc(12px + var(--safe-bottom));
+            z-index: 200;
+            transform: translateY(100%);
+            transition: transform .28s cubic-bezier(.4,0,.2,1);
+        }
+
+        .editor-panel.open { transform: translateY(0); }
+
+        .editor-handle {
+            width: 36px;
+            height: 4px;
+            background: #ccc;
+            border-radius: 2px;
+            margin: 10px auto 8px;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .editor-header span {
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--green-dark);
+        }
+
+        .editor-close {
+            background: #f5f5f5;
+            border: none;
+            font-size: 1rem;
+            color: #666;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .editor-label {
+            font-size: .68rem;
+            color: #aaa;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .editor-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .editor-row:last-child { margin-bottom: 0; }
+
+        .editor-btn {
+            flex: 1;
+            max-width: 52px;
+            height: 44px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .1s;
+            user-select: none;
+        }
+
+        .editor-btn:active { transform: scale(.93); }
+
+        .editor-btn.active-num {
+            background: #e3f2fd;
+            border-color: #1565c0;
+            color: #1565c0;
+        }
+        .editor-btn.active-check {
+            background: #e8f5e9;
+            border-color: var(--green-mid);
+            color: var(--green-mid);
+        }
+        .editor-btn.active-cross {
+            background: var(--red-light);
+            border-color: var(--red);
+            color: var(--red);
+        }
+        .editor-btn.active-qgreen {
+            background: #e8f5e9;
+            border-color: var(--green-mid);
+            color: var(--green-mid);
+        }
+        .editor-btn.active-qred {
+            background: var(--red-light);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .editor-marks-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .editor-mark-btn {
+            flex: 1;
+            height: 44px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            cursor: pointer;
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: all .1s;
+            user-select: none;
+        }
+        .editor-mark-btn:active { transform: scale(.93); }
+        .editor-mark-btn .lbl {
+            font-size: .55rem;
+            font-weight: 600;
+            opacity: .6;
+        }
+
+        /* --- Modals --- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s;
+            padding: 20px;
+            padding-bottom: calc(20px + var(--safe-bottom));
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 20px;
+            max-width: 320px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,.2);
+        }
+
+        .modal-box h3 { margin-bottom: 8px; color: var(--green-dark); font-size: 1.05rem; }
+        .modal-box p { font-size: .88rem; color: #666; margin-bottom: 16px; }
+
+        .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
+        .modal-box button {
+            padding: 10px 22px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: .9rem;
+            min-height: 42px;
+        }
+
+        .btn-cancel { background: #e0e0e0; color: #333; }
+        .btn-cancel:active { background: #d0d0d0; }
+        .btn-danger { background: var(--red); color: white; }
+        .btn-danger:active { background: #b71c1c; }
+
+        .help-content {
+            text-align: left;
+            max-width: 340px;
+        }
+        .help-content ul {
+            font-size: .84rem;
+            color: #555;
+            line-height: 1.7;
+            padding-left: 18px;
+            margin-bottom: 16px;
+        }
+
+        /* --- Responsive --- */
+        @media (min-width: 600px) {
+            :root {
+                --cell-min: 50px;
+                --name-col: 145px;
+            }
+            .section { margin: 12px auto; max-width: 700px; }
+            .player-config { justify-content: center; }
+            .editor-panel {
+                max-width: 500px;
+                left: 50%;
+                transform: translateX(-50%) translateY(100%);
+                border-radius: 16px 16px 0 0;
+            }
+            .editor-panel.open { transform: translateX(-50%) translateY(0); }
+            .cell .mark { font-size: .7rem; }
+            .mark-num { font-size: .65rem; min-width: 14px; }
+            .mark-check, .mark-cross { font-size: .85rem; }
+            .grid-table td:first-child { font-size: .85rem; }
+        }
+
+        @media (max-width: 359px) {
+            :root {
+                --cell-min: 36px;
+                --name-col: 95px;
+            }
+            .grid-table td:first-child { font-size: .7rem; padding-left: 6px; padding-right: 4px; }
+            .grid-table th:first-child { padding-left: 6px; min-width: 95px; }
+            .section { margin: 6px 3px; border-radius: 8px; }
+            .section-title { font-size: .78rem; padding: 5px 10px; letter-spacing: 1px; }
+            .cell .mark { font-size: .52rem; }
+            .mark-check, .mark-cross { font-size: .65rem; }
+            header h1 { font-size: 1.2rem; letter-spacing: 2px; }
+            .editor-btn { height: 40px; font-size: .9rem; }
+            .editor-mark-btn { height: 40px; }
+        }
+
+        @media (max-width: 320px) {
+            :root {
+                --cell-min: 32px;
+                --name-col: 85px;
+            }
+            .grid-table td:first-child { font-size: .65rem; }
+        }
+
+        /* Landscape phone */
+        @media (max-height: 500px) and (orientation: landscape) {
+            header { padding: 6px 16px; }
+            header h1 { font-size: 1.1rem; }
+            .player-config { padding: 6px 12px; }
+            .name-legend { padding: 3px 8px; }
+            .section { margin: 6px; }
+            .section-title { padding: 4px 12px; font-size: .8rem; }
+            .editor-panel { padding-bottom: calc(6px + var(--safe-bottom)); }
+            .editor-row { margin-bottom: 6px; }
+            .editor-btn, .editor-mark-btn { height: 36px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Clue</h1>
+        <div class="header-controls">
+            <button class="btn-icon" onclick="toggleHelp()" title="Ayuda" aria-label="Ayuda">?</button>
+            <button class="btn-icon" onclick="showResetModal()" title="Reiniciar" aria-label="Reiniciar">&#8634;</button>
+        </div>
+    </header>
+
+    <div class="player-config" id="playerConfig"></div>
+
+    <div class="name-legend">
+        <span>Toque en nombre: <b style="text-decoration:line-through;color:var(--red)">tachado</b> &rarr; <b style="outline:2px solid var(--green-light);border-radius:10px;padding:0 4px">redondeado</b> &rarr; normal</span>
+    </div>
+
+    <div id="sections"></div>
+
+    <div class="editor-backdrop" id="editorBackdrop" onclick="closeEditor()"></div>
+    <div class="editor-panel" id="editorPanel">
+        <div class="editor-handle"></div>
+        <div class="editor-header">
+            <span id="editorTitle">&mdash;</span>
+            <button class="editor-close" onclick="closeEditor()" aria-label="Cerrar">&times;</button>
+        </div>
+        <div class="editor-label">N&uacute;meros</div>
+        <div class="editor-row" id="editorNumbers"></div>
+        <div class="editor-label">Marcas</div>
+        <div class="editor-marks-row" id="editorMarks"></div>
+    </div>
+
+    <div class="modal-overlay" id="resetModal">
+        <div class="modal-box">
+            <h3>&iquest;Reiniciar todo?</h3>
+            <p>Se borrar&aacute;n todas las anotaciones.</p>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="hideResetModal()">Cancelar</button>
+                <button class="btn-danger" onclick="resetAll()">Reiniciar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="helpModal" style="z-index:301">
+        <div class="modal-box help-content">
+            <h3 style="text-align:center">C&oacute;mo usar</h3>
+            <ul>
+                <li>Toc&aacute; una <b>casilla</b> para agregar n&uacute;meros (1-7) y marcas</li>
+                <li>El <b style="color:var(--green-mid)">&#10003;</b> y la <b style="color:var(--red)">&#10007;</b> son opuestos: activar uno desactiva el otro</li>
+                <li>Toc&aacute; un <b>nombre</b> para tacharlo o redondearlo</li>
+                <li>Edit&aacute; los nombres de jugadores arriba</li>
+                <li>Pod&eacute;s deslizar la tabla horizontalmente si hay muchas columnas</li>
+                <li>Todo se guarda autom&aacute;ticamente</li>
+            </ul>
+            <div style="text-align:center">
+                <button class="btn-cancel" onclick="hideHelp()">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const DATA = [
+        { title: 'sospechosos', items: ['Coronel Mostaza','Profesor Moradillo','Sr. Verdi','Sra. Azulino','Srita. Escarlata','Sra. Blanco'] },
+        { title: 'armas', items: ['Cuchillo','Candelabro','Pistola','Cuerda','Tubo','Llave de tuercas'] },
+        { title: 'habitaciones', items: ['Vest\u00edbulo','Sala','Comedor','Cocina','Sal\u00f3n de Baile','Invernadero','Billar','Biblioteca','Estudio'] }
+    ];
+
+    const STORAGE_KEY = 'clue-notepad-v2';
+    let state = loadState();
+    let activeCell = null;
+
+    function defaultState() {
+        return { players: ['J1','J2','J3','J4','J5'], cells: {}, names: {} };
+    }
+
+    function loadState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) { const s = JSON.parse(raw); if (s.players && s.cells && s.names) return s; }
+        } catch(e) {}
+        return defaultState();
+    }
+
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+    function ck(si,ii,pi) { return si+'-'+ii+'-'+pi; }
+    function nk(si,ii) { return si+'-'+ii; }
+
+    function getCell(si,ii,pi) {
+        const k = ck(si,ii,pi);
+        if (!state.cells[k]) state.cells[k] = { numbers:[], check:false, cross:false, qgreen:false, qred:false };
+        return state.cells[k];
+    }
+
+    function getNameState(si,ii) { return state.names[nk(si,ii)] || 'normal'; }
+
+    function cycleNameState(si,ii) {
+        const cur = getNameState(si,ii);
+        state.names[nk(si,ii)] = cur === 'normal' ? 'strikethrough' : cur === 'strikethrough' ? 'circled' : 'normal';
+        saveState();
+        renderSections();
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function renderPlayerConfig() {
+        const c = document.getElementById('playerConfig');
+        let h = '<label>Jugadores:</label>';
+        state.players.forEach((name,i) => {
+            h += '<div class="player-chip">' +
+                '<input value="'+esc(name)+'" maxlength="8" oninput="updPlayer('+i+',this.value)"/>' +
+                (state.players.length > 2 ? '<button class="player-remove" onclick="rmPlayer('+i+')">&#10005;</button>' : '') +
+                '</div>';
+        });
+        if (state.players.length < 7) h += '<button class="player-add" onclick="addPlayer()">+</button>';
+        c.innerHTML = h;
+    }
+
+    function updPlayer(i,v) { state.players[i]=v; saveState(); renderSections(); }
+
+    function addPlayer() {
+        if (state.players.length >= 7) return;
+        state.players.push('J'+(state.players.length+1));
+        saveState(); renderPlayerConfig(); renderSections();
+    }
+
+    function rmPlayer(i) {
+        if (state.players.length <= 2) return;
+        state.players.splice(i,1);
+        const nc = {};
+        for (const key in state.cells) {
+            const p = key.split('-').map(Number);
+            if (p[2] === i) continue;
+            nc[ck(p[0],p[1],p[2]>i?p[2]-1:p[2])] = state.cells[key];
+        }
+        state.cells = nc;
+        saveState(); closeEditor(); renderPlayerConfig(); renderSections();
+    }
+
+    function renderSections() {
+        const container = document.getElementById('sections');
+        let h = '';
+        DATA.forEach((sec,si) => {
+            h += '<div class="section"><div class="section-title">'+sec.title+'</div><div class="grid-wrapper"><table class="grid-table"><thead><tr><th></th>';
+            state.players.forEach(p => { h += '<th>'+esc(p)+'</th>'; });
+            h += '</tr></thead><tbody>';
+            sec.items.forEach((item,ii) => {
+                const ns = getNameState(si,ii);
+                const cls = ns==='strikethrough'?'name-strikethrough':ns==='circled'?'name-circled':'';
+                h += '<tr><td onclick="cycleNameState('+si+','+ii+')"><span class="'+cls+'">'+esc(item)+'</span></td>';
+                state.players.forEach((_,pi) => {
+                    const cell = getCell(si,ii,pi);
+                    const act = activeCell && activeCell.si===si && activeCell.ii===ii && activeCell.pi===pi;
+                    h += '<td><div class="cell'+(act?' active':'')+'" onclick="openEditor('+si+','+ii+','+pi+')">'+renderMarks(cell)+'</div></td>';
+                });
+                h += '</tr>';
+            });
+            h += '</tbody></table></div></div>';
+        });
+        container.innerHTML = h;
+    }
+
+    function renderMarks(c) {
+        let r = '';
+        c.numbers.forEach(n => { r += '<span class="mark mark-num">'+n+'</span>'; });
+        if (c.check) r += '<span class="mark mark-check">&#10003;</span>';
+        if (c.cross) r += '<span class="mark mark-cross">&#10007;</span>';
+        if (c.qgreen) r += '<span class="mark mark-qgreen">?</span>';
+        if (c.qred) r += '<span class="mark mark-qred">?</span>';
+        return r;
+    }
+
+    function openEditor(si,ii,pi) {
+        activeCell = {si,ii,pi};
+        const c = getCell(si,ii,pi);
+        document.getElementById('editorTitle').textContent = DATA[si].items[ii]+' \u2192 '+state.players[pi];
+
+        let nh = '';
+        for (let n=1; n<=7; n++) {
+            nh += '<button class="editor-btn'+(c.numbers.includes(n)?' active-num':'')+'" onclick="togNum('+n+')">'+n+'</button>';
+        }
+        document.getElementById('editorNumbers').innerHTML = nh;
+
+        let mh = '';
+        mh += '<button class="editor-mark-btn'+(c.check?' active-check':'')+'" onclick="togMark(\'check\')" style="color:var(--green-mid)">&#10003;</button>';
+        mh += '<button class="editor-mark-btn'+(c.cross?' active-cross':'')+'" onclick="togMark(\'cross\')" style="color:var(--red)">&#10007;</button>';
+        mh += '<button class="editor-mark-btn'+(c.qgreen?' active-qgreen':'')+'" onclick="togMark(\'qgreen\')" style="color:var(--green-mid)">?</button>';
+        mh += '<button class="editor-mark-btn'+(c.qred?' active-qred':'')+'" onclick="togMark(\'qred\')" style="color:var(--red)">?</button>';
+        document.getElementById('editorMarks').innerHTML = mh;
+
+        document.getElementById('editorPanel').classList.add('open');
+        document.getElementById('editorBackdrop').classList.add('open');
+        renderSections();
+
+        requestAnimationFrame(() => {
+            const actEl = document.querySelector('.cell.active');
+            if (actEl) actEl.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+        });
+    }
+
+    function closeEditor() {
+        activeCell = null;
+        document.getElementById('editorPanel').classList.remove('open');
+        document.getElementById('editorBackdrop').classList.remove('open');
+        renderSections();
+    }
+
+    function togNum(n) {
+        if (!activeCell) return;
+        const c = getCell(activeCell.si,activeCell.ii,activeCell.pi);
+        const i = c.numbers.indexOf(n);
+        if (i>=0) c.numbers.splice(i,1); else c.numbers.push(n);
+        c.numbers.sort();
+        saveState(); openEditor(activeCell.si,activeCell.ii,activeCell.pi);
+    }
+
+    function togMark(m) {
+        if (!activeCell) return;
+        const c = getCell(activeCell.si,activeCell.ii,activeCell.pi);
+        if (m==='check') { c.check=!c.check; if(c.check) c.cross=false; }
+        else if (m==='cross') { c.cross=!c.cross; if(c.cross) c.check=false; }
+        else c[m]=!c[m];
+        saveState(); openEditor(activeCell.si,activeCell.ii,activeCell.pi);
+    }
+
+    function showResetModal() { document.getElementById('resetModal').classList.add('open'); }
+    function hideResetModal() { document.getElementById('resetModal').classList.remove('open'); }
+    function toggleHelp() { document.getElementById('helpModal').classList.add('open'); }
+    function hideHelp() { document.getElementById('helpModal').classList.remove('open'); }
+
+    function resetAll() {
+        state = defaultState(); saveState(); activeCell = null;
+        closeEditor(); hideResetModal(); renderPlayerConfig(); renderSections();
+    }
+
+    document.addEventListener('keydown', e => { if(e.key==='Escape') closeEditor(); });
+
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); });
+    });
+
+    renderPlayerConfig();
+    renderSections();
+    </script>
+</body>
+</html>
