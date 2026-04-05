@@ -318,14 +318,13 @@
         .cell.active { background: #c8e6c9; outline: 2px solid var(--green-light); outline-offset: -2px; }
 
         .cell .mark {
-            font-size: .6rem;
             font-weight: 700;
             line-height: 1;
             padding: 1px 2px;
             border-radius: 2px;
         }
 
-        .mark-num {
+        .cell .mark-num {
             color: #1565c0;
             background: #e3f2fd;
             min-width: 12px;
@@ -333,8 +332,8 @@
             font-size: .58rem;
         }
 
-        .mark-check { color: var(--green-mid); font-size: .75rem; }
-        .mark-cross { color: var(--red); font-size: .75rem; }
+        .cell .mark-check { color: var(--green-mid); font-size: 1.4rem; }
+        .cell .mark-cross { color: var(--red); font-size: 1.4rem; }
         .mark-qgreen { color: var(--green-mid); font-size: .68rem; }
         .mark-qred { color: var(--red); font-size: .68rem; }
 
@@ -571,7 +570,7 @@
             .editor-panel.open { transform: translateX(-50%) translateY(0); }
             .cell .mark { font-size: .7rem; }
             .mark-num { font-size: .65rem; min-width: 14px; }
-            .mark-check, .mark-cross { font-size: .85rem; }
+            .cell .mark-check, .cell .mark-cross { font-size: 1.6rem; }
             .grid-table td:first-child { font-size: .85rem; }
         }
 
@@ -585,7 +584,7 @@
             .section { margin: 6px 3px; border-radius: 8px; }
             .section-title { font-size: .78rem; padding: 5px 10px; letter-spacing: 1px; }
             .cell .mark { font-size: .52rem; }
-            .mark-check, .mark-cross { font-size: .65rem; }
+            .cell .mark-check, .cell .mark-cross { font-size: 1.2rem; }
             header h1 { font-size: 1.2rem; letter-spacing: 2px; }
             .editor-btn { height: 40px; font-size: .9rem; }
             .editor-mark-btn { height: 40px; }
@@ -843,7 +842,10 @@
     function hideHelp() { document.getElementById('helpModal').classList.remove('open'); }
 
     function resetAll() {
-        state = defaultState(); saveState(); activeCell = null;
+        const players = state.players.slice();
+        state = defaultState();
+        state.players = players;
+        saveState(); activeCell = null;
         closeEditor(); hideResetModal(); renderPlayerConfig(); renderSections();
     }
 
