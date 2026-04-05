@@ -269,7 +269,28 @@
             text-decoration: line-through;
             text-decoration-color: var(--red);
             text-decoration-thickness: 2px;
-            opacity: .45;
+        }
+
+        .row-struck td {
+            position: relative;
+            background: #f9f9f9;
+        }
+        .row-struck td:first-child {
+            background: #f9f9f9;
+        }
+        .row-struck td > * {
+            opacity: .35;
+        }
+        .row-struck td::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(50% - 1px);
+            height: 2px;
+            background: var(--red);
+            pointer-events: none;
+            z-index: 2;
         }
         .name-circled {
             background: #fff9c4;
@@ -739,7 +760,8 @@
             sec.items.forEach((item,ii) => {
                 const ns = getNameState(si,ii);
                 const cls = ns==='strikethrough'?'name-strikethrough':ns==='circled'?'name-circled':'';
-                h += '<tr><td onclick="cycleNameState('+si+','+ii+')"><span class="'+cls+'">'+esc(item)+'</span></td>';
+                const rowCls = ns==='strikethrough'?' class="row-struck"':'';
+                h += '<tr'+rowCls+'><td onclick="cycleNameState('+si+','+ii+')"><span class="'+cls+'">'+esc(item)+'</span></td>';
                 state.players.forEach((_,pi) => {
                     const cell = getCell(si,ii,pi);
                     const act = activeCell && activeCell.si===si && activeCell.ii===ii && activeCell.pi===pi;
